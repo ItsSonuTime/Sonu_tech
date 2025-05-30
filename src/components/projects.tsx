@@ -28,7 +28,7 @@ export default function Projects() {
       title: "Gaming web for client",
       description: "A property listing platform with advanced search, filtering, and user authentication.",
       tags: ["HTML", "CSS", "Javascript", "React",],
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlIqnuG0EFMm5rW1-bfY1N3eNVSR8FzAdXPg&s",
+      image: "https://themewagon.com/wp-content/uploads/2020/07/Beko-1.png",
     },
   ]
 

@@ -1,272 +1,364 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { useInView } from "react-intersection-observer"
+import { Mail, MapPin, Phone, Send, ExternalLink } from "lucide-react"
+import emailjs from "@emailjs/browser"
 
 export default function Contact() {
+  const { ref, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  })
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     message: "",
   })
 
-  const [formStatus, setFormStatus] = useState({
-    submitted: false,
-    submitting: false,
-    error: false,
-    message: "",
-  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [errorMessage, setErrorMessage] = useState("")
 
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    message: "",
-  })
+  // EmailJS Configuration
+  const EMAILJS_PUBLIC_KEY = "RggKAAF4Ze8itNfFk"
+  const EMAILJS_SERVICE_ID = "service_17x01fm"
+  const EMAILJS_TEMPLATE_ID = "template_0219lpe"
+  const EMAILJS_AUTO_REPLY_TEMPLATE_ID = "template_pq7s5tj" // You can create a separate template for auto-reply
 
-  const validateForm = () => {
-    const newErrors = {
-      name: "",
-      email: "",
-      message: "",
-    }
-    let isValid = true
+  useEffect(() => {
+    // Initialize EmailJS
+    emailjs.init(EMAILJS_PUBLIC_KEY)
+  }, [])
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
-      isValid = false
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-      isValid = false
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
-      isValid = false
-    }
-
-    if (!formData.message.trim()) {
-      newErrors.message = "Message is required"
-      isValid = false
-    } else if (formData.message.length < 10) {
-      newErrors.message = "Message should be at least 10 characters"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.1,
+      },
+    },
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const itemVariants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+      },
+    },
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }))
-
-    // Clear error when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }))
-    }
-
-    // Reset form status when user starts typing again
-    if (formStatus.submitted || formStatus.error) {
-      setFormStatus({
-        submitted: false,
-        submitting: false,
-        error: false,
-        message: "",
-      })
-    }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setFormStatus({
-      ...formStatus,
-      submitting: true,
-    })
-
+    setIsSubmitting(true)
+    setSubmitStatus("idle")
+    setErrorMessage("")
+    
     try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          access_key: "10b84721-a9ea-4262-9eee-86c112198504",
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setFormStatus({
-          submitted: true,
-          submitting: false,
-          error: false,
-          message: "Thank you! Your message has been sent successfully.",
-        })
-
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          message: "",
-        })
-      } else {
-        throw new Error("Form submission failed")
+      // Prepare template parameters for the main email to you
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        message: formData.message,
+        to_name: "Sonu",
+        reply_to: formData.email,
       }
-    } catch (error) {
-      setFormStatus({
-        submitted: false,
-        submitting: false,
-        error: true,
-        message: "Oops! Something went wrong. Please try again.",
-      })
+
+      // Send email to you (the owner)
+      const response = await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams,
+        EMAILJS_PUBLIC_KEY
+      )
+
+      if (response.status === 200 || response.text === "OK") {
+        // Send auto-reply to the user
+        try {
+          const autoReplyParams = {
+            to_name: formData.name,
+            to_email: formData.email,
+            from_name: "Sonu",
+            from_email: "techsonu360@gmail.com",
+            subject: "Thank you for contacting me!",
+            message: `Hello ${formData.name},\n\nThank you for reaching out to me through my portfolio website! I've received your message and I'm excited to learn more about your project.\n\nI'll review your message and get back to you within 24-48 hours. If your inquiry is urgent, please feel free to contact me directly at techsonu360@gmail.com or +91 8467867135.\n\nBest regards,\nSonu\nMERN Stack Developer`,
+            user_message: formData.message.substring(0, 200),
+          }
+
+          // Send auto-reply using the dedicated auto-reply template
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_AUTO_REPLY_TEMPLATE_ID, // Using dedicated auto-reply template
+            {
+              to_name: formData.name,
+              to_email: formData.email,
+              from_name: "Sonu",
+              from_email: "techsonu360@gmail.com",
+              subject: "Thank you for contacting me!",
+              message: autoReplyParams.message,
+              user_message: formData.message.substring(0, 200),
+            },
+            EMAILJS_PUBLIC_KEY
+          )
+        } catch (autoReplyError) {
+          // Auto-reply failed but main email succeeded, so we still show success
+          console.warn("Auto-reply failed (this is optional):", autoReplyError)
+          // Don't throw error - main email was successful
+        }
+
+        setSubmitStatus("success")
+        setFormData({ name: "", email: "", message: "" })
+      } else {
+        throw new Error("Failed to send email")
+      }
+    } catch (error: any) {
+      console.error("EmailJS Error:", error)
+      setSubmitStatus("error")
+      setErrorMessage(
+        error.text || "Failed to send message. Please try again or contact me directly at techsonu360@gmail.com"
+      )
+    } finally {
+      setIsSubmitting(false)
+      setTimeout(() => {
+        setSubmitStatus("idle")
+        setErrorMessage("")
+      }, 5000)
     }
   }
 
   return (
-    <section id="contact" className="py-16 md:py-24 bg-gray-50">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <div className="inline-block rounded-lg bg-gray-100 px-3 py-1 text-sm">Contact</div>
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Get In Touch</h2>
-            <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Have a project in mind or want to discuss opportunities? I'd love to hear from you.
+    <section id="contact" ref={ref} className="py-12 md:py-16 lg:py-24 bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="container px-3 sm:px-4 md:px-6">
+        <motion.div
+          className="max-w-4xl mx-auto"
+          variants={containerVariants}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+        >
+          {/* Header */}
+          <motion.div className="text-center mb-12 md:mb-20" variants={itemVariants}>
+            <div className="inline-flex items-center gap-2 rounded-full glass-premium px-4 sm:px-6 py-2 text-xs sm:text-sm font-bold text-slate-700 shadow-professional mb-4 md:mb-6 border border-indigo-200/30">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              </span>
+              Get In Touch
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent mb-4 md:mb-6">
+              Let's Work Together
+            </h2>
+            <p className="text-base sm:text-lg md:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto px-2">
+              Ready to bring your ideas to life? I'm always excited to discuss new projects 
+              and opportunities. Let's create something amazing together.
             </p>
-          </div>
-        </div>
+          </motion.div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 py-12 lg:grid-cols-2">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold mb-6">Send Me a Message</h3>
+          <div className="grid lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12">
+            {/* Contact Information */}
+            <motion.div className="space-y-8" variants={itemVariants}>
+              <Card className="border-0 shadow-professional-lg hover-professional bg-white/90 backdrop-blur-sm">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-6">Contact Information</h3>
+                  
+                  <div className="space-y-6">
+                    <a 
+                      href="mailto:techsonu360@gmail.com"
+                      className="flex items-center gap-4 p-4 rounded-lg hover:bg-blue-50 transition-all duration-200 group border border-slate-200 hover:border-blue-300 cursor-pointer"
+                    >
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <Mail className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-slate-900">Email</h4>
+                        <p className="text-slate-600 group-hover:text-blue-600 font-medium">techsonu360@gmail.com</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V16a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </a>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="Your name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={errors.name ? "border-red-500" : ""}
-                  />
-                  {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
-                </div>
+                    <a 
+                      href="tel:+918467867135"
+                      className="flex items-center gap-4 p-4 rounded-lg hover:bg-green-50 transition-all duration-200 group border border-slate-200 hover:border-green-300 cursor-pointer"
+                    >
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                        <Phone className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-slate-900">Phone</h4>
+                        <p className="text-slate-600 group-hover:text-green-600 font-medium">+91 8467867135</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V16a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </a>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Your email address"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={errors.email ? "border-red-500" : ""}
-                  />
-                  {errors.email && <span className="text-sm text-red-500">{errors.email}</span>}
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    placeholder="Your message"
-                    className={`min-h-[150px] ${errors.message ? "border-red-500" : ""}`}
-                    value={formData.message}
-                    onChange={handleChange}
-                  />
-                  {errors.message && <span className="text-sm text-red-500">{errors.message}</span>}
-                </div>
-
-                {formStatus.message && (
-                  <div
-                    className={`p-3 rounded-md ${
-                      formStatus.error ? "bg-red-50 text-red-500" : "bg-green-50 text-green-500"
-                    }`}
-                  >
-                    {formStatus.message}
+                    <a 
+                      href="https://www.google.com/maps/search/?api=1&query=RXVW+JJX+Lucknow+Uttar+Pradesh"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                        <MapPin className="w-6 h-6 text-slate-700 group-hover:text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">Location</h4>
+                        <p className="text-slate-600 group-hover:text-purple-600">Lucknow (Gomti Nagar), India</p>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
                   </div>
-                )}
 
-                <Button type="submit" className="w-full" disabled={formStatus.submitting}>
-                  {formStatus.submitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Sending...
+                  <div className="mt-8 pt-6 border-t border-slate-200">
+                    <h4 className="font-semibold text-slate-900 mb-4">What I Can Help With</h4>
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <div>• Full-stack web application development</div>
+                      <div>• MERN stack projects</div>
+                      <div>• API development and integration</div>
+                      <div>• Frontend UI/UX implementation</div>
+                      <div>• Database design and optimization</div>
+                      <div>• Technical consultation</div>
                     </div>
-                  ) : (
-                    "Send Message"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <div className="flex flex-col gap-8">
-            <Card>
-              <CardContent className="p-6 flex items-start gap-4">
-                <div className="rounded-full bg-primary/10 p-3">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">Email</h3>
-                  <p className="text-gray-500">techsonu360@gmail.com</p>
-                  <p className="text-gray-500">sonudrg9621@gmail.com</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Contact Form */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-0 shadow-professional-lg hover-professional bg-white/90 backdrop-blur-sm">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-6">Send a Message</h3>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
+                        placeholder="Your full name"
+                      />
+                    </div>
 
-            <Card>
-              <CardContent className="p-6 flex items-start gap-4">
-                <div className="rounded-full bg-primary/10 p-3">
-                  <Phone className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">Phone</h3>
-                  <p className="text-gray-500">+91 8467867135</p>
-                  <p className="text-gray-500">Mon-Fri, 9am-5pm EST</p>
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
 
-            <Card>
-              <CardContent className="p-6 flex items-start gap-4">
-                <div className="rounded-full bg-primary/10 p-3">
-                  <MapPin className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">Location</h3>
-                  <p className="text-gray-500"><a href="https://www.google.com/maps/place/26%C2%B055'29.1%22N+80%C2%B057'30.7%22E/@26.9246507,80.9584177,3a,90y,28.38h,84.39t/data=!3m7!1e1!3m5!1sMp9jHhTnVtV9LD-cUEz_Fg!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com%2Fv1%2Fthumbnail%3Fcb_client%3Dmaps_sv.tactile%26w%3D900%26h%3D600%26pitch%3D5.6137611173763275%26panoid%3DMp9jHhTnVtV9LD-cUEz_Fg%26yaw%3D28.381050968459665!7i13312!8i6656!4m4!3m3!8m2!3d26.924742!4d80.9585244?hl=en&entry=ttu&g_ep=EgoyMDI1MDUyNi4wIKXMDSoASAFQAw%3D%3D">WXF5+VCR Lucknow, Uttar Pradesh</a></p>
-                  <p className="text-gray-500">Available for remote work worldwide</p>
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
+                        Message
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        required
+                        rows={5}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors resize-none"
+                        placeholder="Tell me about your project or how I can help..."
+                      />
+                    </div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white py-3 px-6 rounded-professional font-semibold transition-professional disabled:opacity-50"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Sending...
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2">
+                            <Send className="w-4 h-4" />
+                            Send Message
+                          </div>
+                        )}
+                      </Button>
+                    </motion.div>
+
+                    {submitStatus === "success" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm"
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-semibold">Message sent successfully!</p>
+                            <p className="mt-1">I've received your message and an auto-reply has been sent to your email. I'll get back to you soon.</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {submitStatus === "error" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm"
+                      >
+                        {errorMessage || "Sorry, there was an error sending your message. Please try again or contact me directly at techsonu360@gmail.com"}
+                      </motion.div>
+                    )}
+                  </form>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )

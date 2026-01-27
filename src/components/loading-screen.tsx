@@ -1,111 +1,184 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Code2 } from "lucide-react"
+import { Code2, Terminal } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void
 }
 
-// Predefined particle positions and animations
-const PARTICLES = [
-  { left: "10%", top: "20%", delay: "0s", duration: "3s" },
-  { left: "20%", top: "60%", delay: "0.5s", duration: "3.5s" },
-  { left: "30%", top: "40%", delay: "1s", duration: "4s" },
-  { left: "40%", top: "80%", delay: "1.5s", duration: "3.2s" },
-  { left: "50%", top: "30%", delay: "2s", duration: "3.8s" },
-  { left: "60%", top: "70%", delay: "0.2s", duration: "3.3s" },
-  { left: "70%", top: "50%", delay: "0.8s", duration: "3.7s" },
-  { left: "80%", top: "90%", delay: "1.2s", duration: "3.4s" },
-  { left: "90%", top: "10%", delay: "1.8s", duration: "3.6s" },
-  { left: "15%", top: "85%", delay: "0.3s", duration: "3.9s" },
-  { left: "25%", top: "15%", delay: "0.7s", duration: "3.1s" },
-  { left: "35%", top: "65%", delay: "1.1s", duration: "3.5s" },
-  { left: "45%", top: "35%", delay: "1.6s", duration: "3.8s" },
-  { left: "55%", top: "95%", delay: "0.4s", duration: "3.2s" },
-  { left: "65%", top: "25%", delay: "0.9s", duration: "3.6s" },
-  { left: "75%", top: "75%", delay: "1.3s", duration: "3.3s" },
-  { left: "85%", top: "45%", delay: "1.7s", duration: "3.7s" },
-  { left: "95%", top: "85%", delay: "0.6s", duration: "3.4s" },
-  { left: "5%", top: "55%", delay: "1.4s", duration: "3.8s" },
-  { left: "35%", top: "5%", delay: "0.1s", duration: "3.5s" },
-]
-
 export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
   const [progress, setProgress] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
+  const [currentText, setCurrentText] = useState("Initializing...")
+
+  const loadingTexts = [
+    "Initializing development environment...",
+    "Loading React components...",
+    "Setting up state management...",
+    "Configuring API endpoints...",
+    "Optimizing performance...",
+    "Ready to showcase!"
+  ]
 
   useEffect(() => {
     const timer = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        const newProgress = prev + Math.random() * 3 + 1
+        
+        // Update loading text based on progress
+        const textIndex = Math.floor((newProgress / 100) * loadingTexts.length)
+        if (textIndex < loadingTexts.length) {
+          setCurrentText(loadingTexts[textIndex])
+        }
+
+        if (newProgress >= 100) {
           clearInterval(timer)
           setIsComplete(true)
           setTimeout(() => {
             onLoadingComplete()
-          }, 500)
+          }, 800)
           return 100
         }
-        return prev + 2
+        return newProgress
       })
-    }, 50)
+    }, 80)
 
     return () => clearInterval(timer)
   }, [onLoadingComplete])
 
   return (
-    <div
-      className={`fixed inset-0 z-[100] bg-white flex items-center justify-center transition-opacity duration-500 ${
-        isComplete ? "opacity-0 pointer-events-none" : "opacity-100"
-      }`}
-    >
-      <div className="text-center space-y-8 px-4 sm:space-y-10 relative">
-        {/* Circular Loading Animation */}
-        <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto">
-          <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
-          <div 
-            className="absolute inset-0 border-4 border-black rounded-full animate-spin-slow"
-            style={{
-              borderTopColor: 'transparent',
-              borderRightColor: 'transparent',
-              transform: 'rotate(45deg)'
-            }}
-          ></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Code2 className="w-12 h-12 sm:w-16 sm:h-16 text-black" />
+    <AnimatePresence>
+      {!isComplete && (
+        <motion.div
+          className="fixed inset-0 z-[100] bg-white flex items-center justify-center overflow-hidden"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0, scale: 1.1 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+        >
+          {/* Technical Grid Background */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30" />
+          
+          {/* Code Pattern - Hidden on small screens */}
+          <div className="hidden sm:block absolute top-10 right-10 text-slate-200 font-mono text-xs opacity-20 select-none">
+            <div>const portfolio = {`{`}</div>
+            <div className="ml-4">developer: "Sonu",</div>
+            <div className="ml-4">status: "loading...",</div>
+            <div className="ml-4">progress: {Math.floor(progress)}%</div>
+            <div>{`}`};</div>
           </div>
-        </div>
 
-        {/* Loading Text */}
-        <div className="space-y-4 sm:space-y-6">
-          <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 animate-fade-in">
-            Happy<span className="text-black">Coder</span>
-          </h1>
-          <p className="text-gray-600 text-sm sm:text-base animate-fade-in-delay">
-            Loading professional content...
-          </p>
-        </div>
+          <div className="text-center space-y-6 sm:space-y-8 px-4 relative z-10 max-w-sm sm:max-w-md">
+            {/* Animated Logo */}
+            <motion.div 
+              className="relative w-16 sm:w-24 h-16 sm:h-24 mx-auto"
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ duration: 1 }}
+            >
+              {/* Outer ring */}
+              <motion.div 
+                className="absolute inset-0 border-3 sm:border-4 border-slate-200 rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              />
+              
+              {/* Progress ring */}
+              <motion.div 
+                className="absolute inset-0 border-3 sm:border-4 border-transparent rounded-full"
+                style={{
+                  borderTopColor: '#475569',
+                  borderRightColor: '#64748b',
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              />
+              
+              {/* Inner icon */}
+              <motion.div 
+                className="absolute inset-0 flex items-center justify-center"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Terminal className="w-8 sm:w-12 h-8 sm:h-12 text-slate-700" />
+              </motion.div>
+            </motion.div>
 
-        {/* Progress Bar */}
-        <div className="w-72 sm:w-96 mx-auto">
-          <div className="bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
-            <div
-              className="bg-black h-full rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
+            {/* Loading Text */}
+            <motion.div 
+              className="space-y-2 sm:space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+            >
+              <motion.h1 
+                className="text-2xl sm:text-3xl font-bold text-slate-900"
+              >
+                Sonu<span className="text-slate-600">-Tech</span>
+              </motion.h1>
+              
+              <motion.p 
+                className="text-slate-600 text-xs sm:text-sm px-2"
+                key={currentText}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {currentText}
+              </motion.p>
+            </motion.div>
+
+            {/* Enhanced Progress Bar */}
+            <motion.div 
+              className="w-full max-w-xs mx-auto"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+            >
+              <div className="bg-slate-200 rounded-full h-2 overflow-hidden shadow-inner">
+                <motion.div
+                  className="h-full rounded-full bg-slate-800 shadow-lg"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              
+              <div className="flex justify-between mt-2 text-xs px-2">
+                <motion.span 
+                  className="text-slate-500 font-mono"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  Loading...
+                </motion.span>
+                <motion.span 
+                  className="text-slate-600 font-mono font-semibold"
+                  key={Math.floor(progress)}
+                  initial={{ scale: 1.2 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {Math.floor(progress)}%
+                </motion.span>
+              </div>
+            </motion.div>
+
+            {/* Technical Details */}
+            <motion.div 
+              className="text-xs text-slate-400 font-mono space-y-1 px-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+            >
+              <div>React.js • Node.js • MongoDB • Express.js</div>
+              <div>Full Stack Web Developer Portfolio</div>
+            </motion.div>
           </div>
-          <div className="flex justify-between mt-2">
-            <p className="text-gray-600 text-xs sm:text-sm">Loading</p>
-            <p className="text-gray-600 text-xs sm:text-sm">{progress}%</p>
-          </div>
-        </div>
-
-        {/* Subtle Background Elements */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 sm:w-96 sm:h-96 border border-gray-100 rounded-full animate-spin-slow" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 sm:w-[28rem] sm:h-[28rem] border border-gray-100 rounded-full animate-spin-slow" style={{ animationDirection: 'reverse' }} />
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
